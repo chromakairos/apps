@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Compass</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #camera {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .compass-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px;
+            height: 280px;
+        }
+
+        .compass-ring {
+            width: 100%;
+            height: 100%;
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            position: relative;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .compass-directions {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .direction {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+
+        .direction.focus {
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .direction.connect {
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .direction.create {
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .direction.present {
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .compass-needle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 120px;
+            margin-left: -2px;
+            margin-top: -60px;
+            transform-origin: center;
+            transition: transform 0.5s ease-out;
+        }
+
+        .needle-north {
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(to bottom, #ff4444, #cc3333);
+            border-radius: 2px 2px 0 0;
+        }
+
+        .needle-south {
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(to bottom, #666, #333);
+            border-radius: 0 0 2px 2px;
+        }
+
+        .center-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .start-button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .start-button:hover {
+            background: #0056CC;
+            transform: translateY(-2px);
+        }
+
+        .error-message {
+            color: #ff4444;
+            margin-top: 20px;
+            max-width: 300px;
+            line-height: 1.4;
+        }
+
+        .heading-display {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 18px;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .calibration-note {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 12px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <div class="start-screen" id="startScreen">
+        <h1>Digital Compass</h1>
+        <p>Experience intentional navigation</p>
+        <button class="start-button" onclick="startCompass()">Start Compass</button>
+        <div class="error-message" id="errorMessage" style="display: none;"></div>
+    </div>
+
+    <div class="camera-container" style="display: none;" id="cameraContainer">
+        <video id="camera" autoplay playsinline></video>
+        
+        <div class="compass-overlay">
+            <div class="compass-ring">
+                <div class="compass-directions">
+                    <div class="direction focus">FOCUS</div>
+                    <div class="direction connect">CONNECT</div>
+                    <div class="direction create">CREATE</div>
+                    <div class="direction present">PRESENT</div>
+                </div>
+                
+                <div class="compass-needle" id="needle">
+                    <div class="needle-north"></div>
+                    <div class="needle-south"></div>
+                </div>
+                
+                <div class="center-dot"></div>
+            </div>
+        </div>
+
+        <div class="calibration-note">
+            Move device in figure-8 pattern to calibrate
+        </div>
+
+        <div class="heading-display" id="headingDisplay">
+            Heading: --°
+        </div>
+    </div>
+
+    <script>
+        let currentHeading = 0;
+        let compassCalibrated = false;
+
+        async function startCompass() {
+            try {
+                // Request camera access
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    } 
+                });
+                
+                const video = document.getElementById('camera');
+                video.srcObject = stream;
+
+                // Request device orientation permission (iOS)
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    if (permission !== 'granted') {
+                        throw new Error('Device orientation permission denied');
+                    }
+                }
+
+                // Hide start screen and show camera
+                document.getElementById('startScreen').style.display = 'none';
+                document.getElementById('cameraContainer').style.display = 'block';
+
+                // Start listening for device orientation
+                window.addEventListener('deviceorientationabsolute', handleOrientation);
+                window.addEventListener('deviceorientation', handleOrientation);
+
+                // Fallback for older browsers
+                setTimeout(() => {
+                    if (!compassCalibrated) {
+                        window.addEventListener('deviceorientation', handleOrientationFallback);
+                    }
+                }, 2000);
+
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function handleOrientation(event) {
+            if (event.absolute !== false && event.alpha !== null) {
+                compassCalibrated = true;
+                updateCompass(event.alpha);
+            }
+        }
+
+        function handleOrientationFallback(event) {
+            if (event.alpha !== null) {
+                updateCompass(event.alpha);
+            }
+        }
+
+        function updateCompass(alpha) {
+            // Convert alpha to compass heading (0° = North)
+            // Alpha gives rotation around z-axis, we need to adjust for magnetic north
+            currentHeading = alpha;
+            
+            // Rotate needle to point north
+            const needle = document.getElementById('needle');
+            needle.style.transform = `rotate(${360 - currentHeading}deg)`;
+            
+            // Update heading display
+            const headingDisplay = document.getElementById('headingDisplay');
+            headingDisplay.textContent = `Heading: ${Math.round(currentHeading)}°`;
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = `Error: ${message}. Please ensure you're using HTTPS and grant camera/motion permissions.`;
+            errorElement.style.display = 'block';
+        }
+
+        // Handle orientation changes
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                // Recalibrate after orientation change
+                compassCalibrated = false;
+            }, 500);
+        });
+
+        // Prevent zoom on double tap
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
