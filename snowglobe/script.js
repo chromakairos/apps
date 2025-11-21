@@ -170,16 +170,16 @@ class InteractiveSnowglobe {
         
         const now = Date.now();
         
-        // Detect shake motion
-        if (totalDelta > 15) {
+        // Detect shake motion - lower threshold, easier to trigger
+        if (totalDelta > 8) {
             if (!this.isCurrentlyShaking) {
-                // NEW shake session starting! Create snow once per shake
+                // NEW shake session starting! More generous snow
                 this.isCurrentlyShaking = true;
-                const intensity = Math.min(totalDelta / 30, 1);
+                const intensity = Math.min(totalDelta / 20, 1);
                 this.shakeIntensity = intensity;
                 
-                // One nice burst per shake session
-                const flakeCount = Math.floor(intensity * 8) + 4; // 4-12 flakes per shake
+                // More generous snow per shake session
+                const flakeCount = Math.floor(intensity * 15) + 8; // 8-23 flakes per shake
                 this.createSnowflakes(flakeCount, intensity);
                 
                 console.log('New shake session started!', flakeCount, 'flakes');
@@ -189,8 +189,8 @@ class InteractiveSnowglobe {
             this.lastShakeTime = now;
         }
         
-        // End shake session after 400ms of calm
-        if (this.isCurrentlyShaking && now - this.lastShakeTime > 400) {
+        // End shake session after 250ms of calm (more responsive)
+        if (this.isCurrentlyShaking && now - this.lastShakeTime > 250) {
             this.isCurrentlyShaking = false;
             console.log('Shake session ended');
         }
