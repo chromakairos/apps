@@ -7,7 +7,8 @@ class InteractiveSnowglobe {
         this.lastAcceleration = { x: 0, y: 0, z: 0 };
         this.snowflakeId = 0;
         this.animationFrame = null;
-        this.lastSnowTime = 0;
+        this.isCurrentlyShaking = false;
+        this.lastShakeTime = 0;
         
         this.init();
     }
@@ -167,18 +168,31 @@ class InteractiveSnowglobe {
             z: currentZ
         };
         
-        // Even higher threshold for vigorous shakes + longer rate limiting
-        if (totalDelta > 20) {
-            const now = Date.now();
-            // Rate limit: only allow snow creation every X milliseconds
-            if (!this.lastSnowTime || now - this.lastSnowTime > 1000) {    // previously 400
-                const intensity = Math.min(totalDelta / 40, 1); // Higher denominator = less intensity
+        const now = Date.now();
+        
+        // Detect shake motion
+        if (totalDelta > 15) {
+            if (!this.isCurrentlyShaking) {
+                // NEW shake session starting! Create snow once per shake
+                this.isCurrentlyShaking = true;
+                const intensity = Math.min(totalDelta / 30, 1);
                 this.shakeIntensity = intensity;
                 
-                const flakeCount = Math.floor(intensity * 6); // Previously +2
+                // One nice burst per shake session
+                const flakeCount = Math.floor(intensity * 8) + 4; // 4-12 flakes per shake
                 this.createSnowflakes(flakeCount, intensity);
-                this.lastSnowTime = now;
+                
+                console.log('New shake session started!', flakeCount, 'flakes');
             }
+            
+            // Reset the shake session timeout
+            this.lastShakeTime = now;
+        }
+        
+        // End shake session after 400ms of calm
+        if (this.isCurrentlyShaking && now - this.lastShakeTime > 400) {
+            this.isCurrentlyShaking = false;
+            console.log('Shake session ended');
         }
     }
     
