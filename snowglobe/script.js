@@ -53,15 +53,13 @@ class InteractiveSnowglobe {
     }
     
     setupEventListeners() {
-        // Device motion detection for shake
+        // Check if we need to show permission button (iOS 13+)
         if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-            DeviceMotionEvent.requestPermission().then(response => {
-                if (response === 'granted') {
-                    window.addEventListener('devicemotion', this.handleDeviceMotion.bind(this));
-                }
-            });
+            document.getElementById('permission-btn').style.display = 'block';
+            document.getElementById('permission-btn').addEventListener('click', this.requestMotionPermission.bind(this));
         } else {
-            window.addEventListener('devicemotion', this.handleDeviceMotion.bind(this));
+            // For Android and older iOS, just add the listener directly
+            this.addMotionListener();
         }
         
         // Mouse events for desktop testing
@@ -93,26 +91,51 @@ class InteractiveSnowglobe {
         });
     }
     
+    requestMotionPermission() {
+        DeviceMotionEvent.requestPermission().then(response => {
+            if (response === 'granted') {
+                document.getElementById('permission-btn').style.display = 'none';
+                document.querySelector('.instruction-sub').textContent = '(or drag mouse on desktop)';
+                this.addMotionListener();
+            } else {
+                alert('Motion permission denied. You can still use mouse drag on desktop!');
+            }
+        }).catch(error => {
+            console.error('Error requesting motion permission:', error);
+            alert('Error requesting motion permission. You can still use mouse drag!');
+        });
+    }
+    
+    addMotionListener() {
+        window.addEventListener('devicemotion', this.handleDeviceMotion.bind(this));
+    }
+    
     handleDeviceMotion(event) {
         if (this.showNightSky) return;
         
         const acceleration = event.accelerationIncludingGravity;
         if (!acceleration) return;
         
-        const deltaX = Math.abs(acceleration.x - this.lastAcceleration.x);
-        const deltaY = Math.abs(acceleration.y - this.lastAcceleration.y);
-        const deltaZ = Math.abs(acceleration.z - this.lastAcceleration.z);
+        // Handle null values that sometimes occur on iOS
+        const currentX = acceleration.x || 0;
+        const currentY = acceleration.y || 0;
+        const currentZ = acceleration.z || 0;
+        
+        const deltaX = Math.abs(currentX - this.lastAcceleration.x);
+        const deltaY = Math.abs(currentY - this.lastAcceleration.y);
+        const deltaZ = Math.abs(currentZ - this.lastAcceleration.z);
         
         const totalDelta = deltaX + deltaY + deltaZ;
         
         this.lastAcceleration = {
-            x: acceleration.x,
-            y: acceleration.y,
-            z: acceleration.z
+            x: currentX,
+            y: currentY,
+            z: currentZ
         };
         
-        if (totalDelta > 15) {
-            const intensity = Math.min(totalDelta / 30, 1);
+        // Lower threshold for iOS devices and better sensitivity
+        if (totalDelta > 8) {
+            const intensity = Math.min(totalDelta / 20, 1);
             this.shakeIntensity = intensity;
             
             const flakeCount = Math.floor(intensity * 20) + 5;
