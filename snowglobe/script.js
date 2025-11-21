@@ -177,19 +177,23 @@ class InteractiveSnowglobe {
             z: currentZ
         };
         
-        // Rate-limited approach - good balance
-        if (totalDelta > 12) {
+        // Lower threshold, more responsive to intensity
+        if (totalDelta > 8) {
             const now = Date.now();
-            // Rate limit: allow snow creation every 300ms
-            if (!this.lastSnowTime || now - this.lastSnowTime > 300) {
-                const intensity = Math.min(totalDelta / 25, 1);
+            // Shorter rate limit for more responsive feel
+            if (!this.lastSnowTime || now - this.lastSnowTime > 200) {
+                const intensity = Math.min(totalDelta / 15, 1); // More sensitive to intensity
                 this.shakeIntensity = intensity;
                 
-                const flakeCount = Math.floor(intensity * 12) + 6; // 6-18 flakes per burst
+                // Much more dramatic scaling based on intensity
+                const baseFlakes = 3;
+                const intensityFlakes = Math.floor(intensity * 25); // Big range: 0-25 extra flakes
+                const flakeCount = baseFlakes + intensityFlakes; // Total: 3-28 flakes
+                
                 this.createSnowflakes(flakeCount, intensity);
                 this.lastSnowTime = now;
                 
-                console.log('Snow created!', flakeCount, 'flakes');
+                console.log(`Shake intensity: ${intensity.toFixed(2)}, flakes: ${flakeCount}`);
             }
         }
     }
