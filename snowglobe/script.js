@@ -53,32 +53,31 @@ class InteractiveSnowglobe {
     }
     
     setupEventListeners() {
+        // Better mobile detection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
         // Check if we need to show permission button (iOS 13+)
         if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
             const permissionBtn = document.getElementById('permission-btn');
             permissionBtn.style.display = 'block';
-            console.log('Permission button shown for iOS device');
             
-            // Add multiple event listeners for better compatibility
-            permissionBtn.addEventListener('click', (e) => {
-                console.log('Button clicked!');
-                e.preventDefault();
-                this.requestMotionPermission();
-            });
+            // Make button more prominent on mobile for NFC users
+            if (isMobile) {
+                permissionBtn.innerHTML = '🎄 Tap to Enable Snow Magic! 🎄';
+                permissionBtn.style.background = '#059669';
+                permissionBtn.style.transform = 'translateX(-50%) scale(1.1)';
+            }
             
-            permissionBtn.addEventListener('touchstart', (e) => {
-                console.log('Button touched!');
-                e.preventDefault();
-            });
-            
-            permissionBtn.addEventListener('touchend', (e) => {
-                console.log('Button touch ended!');
-                e.preventDefault();
-                this.requestMotionPermission();
+            // Multiple event types for better mobile compatibility
+            ['click', 'touchstart', 'touchend'].forEach(eventType => {
+                permissionBtn.addEventListener(eventType, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.requestMotionPermission();
+                }, { passive: false });
             });
         } else {
             // For Android and older iOS, just add the listener directly
-            console.log('Adding motion listener directly (non-iOS 13+)');
             this.addMotionListener();
         }
         
@@ -112,17 +111,31 @@ class InteractiveSnowglobe {
     }
     
     requestMotionPermission() {
+        const permissionBtn = document.getElementById('permission-btn');
+        permissionBtn.innerHTML = 'Requesting permission...';
+        
         DeviceMotionEvent.requestPermission().then(response => {
             if (response === 'granted') {
-                document.getElementById('permission-btn').style.display = 'none';
-                document.querySelector('.instruction-sub').textContent = '(or drag mouse on desktop)';
+                permissionBtn.style.display = 'none';
+                document.querySelector('.instruction-sub').textContent = 'Shake away! ✨';
                 this.addMotionListener();
+                
+                // Give immediate feedback with some snow
+                this.createSnowflakes(10, 0.5);
             } else {
-                alert('Motion permission denied. You can still use mouse drag on desktop!');
+                permissionBtn.innerHTML = 'Permission denied - try mouse drag instead';
+                permissionBtn.style.background = '#dc2626';
+                setTimeout(() => {
+                    permissionBtn.style.display = 'none';
+                }, 3000);
             }
         }).catch(error => {
             console.error('Error requesting motion permission:', error);
-            alert('Error requesting motion permission. You can still use mouse drag!');
+            permissionBtn.innerHTML = 'Error - try mouse drag instead';
+            permissionBtn.style.background = '#dc2626';
+            setTimeout(() => {
+                permissionBtn.style.display = 'none';
+            }, 3000);
         });
     }
     
@@ -153,12 +166,12 @@ class InteractiveSnowglobe {
             z: currentZ
         };
         
-        // Lower threshold for iOS devices and better sensitivity
-        if (totalDelta > 8) {
-            const intensity = Math.min(totalDelta / 20, 1);
+        // More sensitive threshold for NFC users (they expect immediate response)
+        if (totalDelta > 5) {
+            const intensity = Math.min(totalDelta / 15, 1);
             this.shakeIntensity = intensity;
             
-            const flakeCount = Math.floor(intensity * 20) + 5;
+            const flakeCount = Math.floor(intensity * 25) + 8; // More snow for mobile users
             this.createSnowflakes(flakeCount, intensity);
         }
     }
