@@ -170,12 +170,12 @@ class InteractiveSnowglobe {
         // Even higher threshold for vigorous shakes + longer rate limiting
         if (totalDelta > 20) {
             const now = Date.now();
-            // Rate limit: only allow snow creation every 400ms (less frequent)
-            if (!this.lastSnowTime || now - this.lastSnowTime > 400) {
+            // Rate limit: only allow snow creation every X milliseconds
+            if (!this.lastSnowTime || now - this.lastSnowTime > 1000) {    // previously 400
                 const intensity = Math.min(totalDelta / 40, 1); // Higher denominator = less intensity
                 this.shakeIntensity = intensity;
                 
-                const flakeCount = Math.floor(intensity * 6) + 2; // Even fewer flakes (max 8 instead of 13)
+                const flakeCount = Math.floor(intensity * 6); // Previously +2
                 this.createSnowflakes(flakeCount, intensity);
                 this.lastSnowTime = now;
             }
