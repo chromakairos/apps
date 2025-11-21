@@ -167,15 +167,15 @@ class InteractiveSnowglobe {
             z: currentZ
         };
         
-        // Much higher threshold to prevent constant triggering + rate limiting
-        if (totalDelta > 12) {
+        // Even higher threshold for vigorous shakes + longer rate limiting
+        if (totalDelta > 20) {
             const now = Date.now();
-            // Rate limit: only allow snow creation every 200ms
-            if (!this.lastSnowTime || now - this.lastSnowTime > 200) {
-                const intensity = Math.min(totalDelta / 25, 1);
+            // Rate limit: only allow snow creation every 400ms (less frequent)
+            if (!this.lastSnowTime || now - this.lastSnowTime > 400) {
+                const intensity = Math.min(totalDelta / 40, 1); // Higher denominator = less intensity
                 this.shakeIntensity = intensity;
                 
-                const flakeCount = Math.floor(intensity * 10) + 3; // Much fewer flakes
+                const flakeCount = Math.floor(intensity * 6) + 2; // Even fewer flakes (max 8 instead of 13)
                 this.createSnowflakes(flakeCount, intensity);
                 this.lastSnowTime = now;
             }
@@ -214,10 +214,10 @@ class InteractiveSnowglobe {
     animateSnowflakes() {
         if (this.showNightSky) return;
         
-        // Limit total snowflakes to prevent performance issues
-        if (this.snowflakes.length > 50) {
+        // Even lower limit for better performance and visual clarity
+        if (this.snowflakes.length > 25) {
             // Remove oldest snowflakes
-            const toRemove = this.snowflakes.splice(0, this.snowflakes.length - 50);
+            const toRemove = this.snowflakes.splice(0, this.snowflakes.length - 25);
             toRemove.forEach(flake => flake.remove());
         }
         
