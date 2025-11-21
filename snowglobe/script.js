@@ -185,10 +185,10 @@ class InteractiveSnowglobe {
                 const intensity = Math.min(totalDelta / 15, 1); // More sensitive to intensity
                 this.shakeIntensity = intensity;
                 
-                // Much more dramatic scaling based on intensity
-                const baseFlakes = 3;
-                const intensityFlakes = Math.floor(intensity * 25); // Big range: 0-25 extra flakes
-                const flakeCount = baseFlakes + intensityFlakes; // Total: 3-28 flakes
+                // Much more dramatic scaling - BIG shakes = LOTS of snow!
+                const baseFlakes = 4;
+                const intensityFlakes = Math.floor(intensity * 40); // Huge range: 0-40 extra flakes
+                const flakeCount = baseFlakes + intensityFlakes; // Total: 4-44 flakes
                 
                 this.createSnowflakes(flakeCount, intensity);
                 this.lastSnowTime = now;
@@ -230,10 +230,10 @@ class InteractiveSnowglobe {
     animateSnowflakes() {
         if (this.showNightSky) return;
         
-        // Even lower limit for better performance and visual clarity
-        if (this.snowflakes.length > 25) {
+        // Higher limit to accommodate bigger shake bursts
+        if (this.snowflakes.length > 60) {
             // Remove oldest snowflakes
-            const toRemove = this.snowflakes.splice(0, this.snowflakes.length - 25);
+            const toRemove = this.snowflakes.splice(0, this.snowflakes.length - 60);
             toRemove.forEach(flake => flake.remove());
         }
         
