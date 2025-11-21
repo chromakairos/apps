@@ -98,8 +98,12 @@ body {
 }
 
 .snowman-gif {
+    /*
     width: 8rem;
     height: 8rem;
+    */
+    width: 16rem;
+    height: 16rem;
     object-fit: contain;
 }
 
@@ -202,8 +206,12 @@ body {
     }
     
     .snowman-gif {
+        /*
         width: 6rem;
         height: 6rem;
+        */
+        width: 10rem;
+        heigth: 10rem;
     }
     
     .instruction-main {
