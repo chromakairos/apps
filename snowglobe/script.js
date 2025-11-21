@@ -7,6 +7,7 @@ class InteractiveSnowglobe {
         this.lastAcceleration = { x: 0, y: 0, z: 0 };
         this.snowflakeId = 0;
         this.animationFrame = null;
+        this.lastSnowTime = 0;
         
         this.init();
     }
@@ -166,13 +167,18 @@ class InteractiveSnowglobe {
             z: currentZ
         };
         
-        // More sensitive threshold for NFC users (they expect immediate response)
-        if (totalDelta > 5) {
-            const intensity = Math.min(totalDelta / 15, 1);
-            this.shakeIntensity = intensity;
-            
-            const flakeCount = Math.floor(intensity * 25) + 8; // More snow for mobile users
-            this.createSnowflakes(flakeCount, intensity);
+        // Much higher threshold to prevent constant triggering + rate limiting
+        if (totalDelta > 12) {
+            const now = Date.now();
+            // Rate limit: only allow snow creation every 200ms
+            if (!this.lastSnowTime || now - this.lastSnowTime > 200) {
+                const intensity = Math.min(totalDelta / 25, 1);
+                this.shakeIntensity = intensity;
+                
+                const flakeCount = Math.floor(intensity * 10) + 3; // Much fewer flakes
+                this.createSnowflakes(flakeCount, intensity);
+                this.lastSnowTime = now;
+            }
         }
     }
     
@@ -207,6 +213,13 @@ class InteractiveSnowglobe {
     
     animateSnowflakes() {
         if (this.showNightSky) return;
+        
+        // Limit total snowflakes to prevent performance issues
+        if (this.snowflakes.length > 50) {
+            // Remove oldest snowflakes
+            const toRemove = this.snowflakes.splice(0, this.snowflakes.length - 50);
+            toRemove.forEach(flake => flake.remove());
+        }
         
         this.snowflakes = this.snowflakes.filter(snowflake => {
             const currentTop = parseFloat(snowflake.dataset.currentTop);
