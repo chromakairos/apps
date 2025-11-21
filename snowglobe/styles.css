@@ -98,10 +98,6 @@ body {
 }
 
 .snowman-gif {
-    /*
-    width: 8rem;
-    height: 8rem;
-    */
     width: 16rem;
     height: 16rem;
     object-fit: contain;
@@ -116,7 +112,6 @@ body {
     text-align: center;
     color: #374151;
     z-index: 100;
-    pointer-events: none;
 }
 
 .instruction-main {
@@ -132,6 +127,10 @@ body {
 }
 
 .permission-btn {
+    position: absolute;
+    top: 8rem;
+    left: 50%;
+    transform: translateX(-50%);
     background: #3b82f6;
     color: white;
     border: none;
@@ -142,11 +141,11 @@ body {
     cursor: pointer;
     transition: background-color 0.2s;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    position: relative;
-    z-index: 5000;
+    z-index: 9999;
     pointer-events: auto;
     -webkit-appearance: none;
-    -webkit-tap-highlight-color: transparent;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+    touch-action: manipulation;
 }
 
 .permission-btn:hover {
@@ -206,12 +205,8 @@ body {
     }
     
     .snowman-gif {
-        /*
-        width: 6rem;
-        height: 6rem;
-        */
         width: 10rem;
-        heigth: 10rem;
+        height: 10rem;
     }
     
     .instruction-main {
@@ -220,5 +215,11 @@ body {
     
     .instruction-sub {
         font-size: 0.8rem;
+    }
+    
+    .permission-btn {
+        top: 7rem;
+        font-size: 0.9rem;
+        padding: 0.6rem 1.2rem;
     }
 }

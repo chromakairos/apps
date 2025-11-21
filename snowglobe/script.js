@@ -55,10 +55,30 @@ class InteractiveSnowglobe {
     setupEventListeners() {
         // Check if we need to show permission button (iOS 13+)
         if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-            document.getElementById('permission-btn').style.display = 'block';
-            document.getElementById('permission-btn').addEventListener('click', this.requestMotionPermission.bind(this));
+            const permissionBtn = document.getElementById('permission-btn');
+            permissionBtn.style.display = 'block';
+            console.log('Permission button shown for iOS device');
+            
+            // Add multiple event listeners for better compatibility
+            permissionBtn.addEventListener('click', (e) => {
+                console.log('Button clicked!');
+                e.preventDefault();
+                this.requestMotionPermission();
+            });
+            
+            permissionBtn.addEventListener('touchstart', (e) => {
+                console.log('Button touched!');
+                e.preventDefault();
+            });
+            
+            permissionBtn.addEventListener('touchend', (e) => {
+                console.log('Button touch ended!');
+                e.preventDefault();
+                this.requestMotionPermission();
+            });
         } else {
             // For Android and older iOS, just add the listener directly
+            console.log('Adding motion listener directly (non-iOS 13+)');
             this.addMotionListener();
         }
         
