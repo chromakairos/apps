@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Snowglobe</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="snowglobe" class="snowglobe-container">
+        <!-- Snowglobe Scene -->
+        <div id="snowglobe-scene" class="scene snowglobe-scene">
+            <!-- Sky gradient background -->
+            <div class="sky-gradient"></div>
+            
+            <!-- Snowflakes container -->
+            <div id="snowflakes-container"></div>
+            
+            <!-- Snowman GIF - centered -->
+            <div class="snowman-container">
+                <img 
+                    src="snowman-joypixels.gif" 
+                    alt="Animated snowman"
+                    class="snowman-gif"
+                />
+            </div>
+            
+            <!-- Shake instruction -->
+            <div class="instructions">
+                <p class="instruction-main">Shake your device to make it snow!</p>
+                <p class="instruction-sub">(or drag mouse on desktop)</p>
+            </div>
+        </div>
+
+        <!-- Night Sky Scene -->
+        <div id="night-scene" class="scene night-scene">
+            <!-- Night sky gradient -->
+            <div class="night-gradient"></div>
+            
+            <!-- Animated stars -->
+            <div id="stars-container"></div>
+            
+            <!-- Message -->
+            <div class="message-container">
+                <h1 id="message-text" class="message-text">
+                    Merry Christmas!
+                </h1>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
