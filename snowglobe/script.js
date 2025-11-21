@@ -7,8 +7,8 @@ class InteractiveSnowglobe {
         this.lastAcceleration = { x: 0, y: 0, z: 0 };
         this.snowflakeId = 0;
         this.animationFrame = null;
-        this.isCurrentlyShaking = false;
-        this.lastShakeTime = 0;
+        this.lastSnowTime = 0;
+        this.timerStarted = false;
         
         this.init();
     }
@@ -18,7 +18,7 @@ class InteractiveSnowglobe {
         this.createStars();
         this.setupEventListeners();
         this.startAnimationLoop();
-        this.scheduleTransition();
+        // DON'T start timer here - wait for permission button click
     }
     
     setupMessage() {
@@ -81,6 +81,8 @@ class InteractiveSnowglobe {
         } else {
             // For Android and older iOS, just add the listener directly
             this.addMotionListener();
+            // Start timer immediately for non-iOS devices
+            this.scheduleTransition();
         }
         
         // Mouse events for desktop testing
@@ -124,11 +126,16 @@ class InteractiveSnowglobe {
                 
                 // Give immediate feedback with some snow
                 this.createSnowflakes(10, 0.5);
+                
+                // START the 10-second timer only now!
+                this.scheduleTransition();
             } else {
                 permissionBtn.innerHTML = 'Permission denied - try mouse drag instead';
                 permissionBtn.style.background = '#dc2626';
                 setTimeout(() => {
                     permissionBtn.style.display = 'none';
+                    // Still start timer even if permission denied (mouse still works)
+                    this.scheduleTransition();
                 }, 3000);
             }
         }).catch(error => {
@@ -137,6 +144,8 @@ class InteractiveSnowglobe {
             permissionBtn.style.background = '#dc2626';
             setTimeout(() => {
                 permissionBtn.style.display = 'none';
+                // Still start timer even on error (mouse still works)
+                this.scheduleTransition();
             }, 3000);
         });
     }
@@ -168,31 +177,20 @@ class InteractiveSnowglobe {
             z: currentZ
         };
         
-        const now = Date.now();
-        
-        // Detect shake motion - lower threshold, easier to trigger
-        if (totalDelta > 8) {
-            if (!this.isCurrentlyShaking) {
-                // NEW shake session starting! More generous snow
-                this.isCurrentlyShaking = true;
-                const intensity = Math.min(totalDelta / 20, 1);
+        // Rate-limited approach - good balance
+        if (totalDelta > 12) {
+            const now = Date.now();
+            // Rate limit: allow snow creation every 300ms
+            if (!this.lastSnowTime || now - this.lastSnowTime > 300) {
+                const intensity = Math.min(totalDelta / 25, 1);
                 this.shakeIntensity = intensity;
                 
-                // More generous snow per shake session
-                const flakeCount = Math.floor(intensity * 15) + 8; // 8-23 flakes per shake
+                const flakeCount = Math.floor(intensity * 12) + 6; // 6-18 flakes per burst
                 this.createSnowflakes(flakeCount, intensity);
+                this.lastSnowTime = now;
                 
-                console.log('New shake session started!', flakeCount, 'flakes');
+                console.log('Snow created!', flakeCount, 'flakes');
             }
-            
-            // Reset the shake session timeout
-            this.lastShakeTime = now;
-        }
-        
-        // End shake session after 250ms of calm (more responsive)
-        if (this.isCurrentlyShaking && now - this.lastShakeTime > 250) {
-            this.isCurrentlyShaking = false;
-            console.log('Shake session ended');
         }
     }
     
