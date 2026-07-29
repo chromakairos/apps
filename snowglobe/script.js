@@ -136,3 +136,6 @@ class InteractiveSnowglobe {
                     this.scheduleTransition();
                 }, 3000);
             }
+        }
+  }
+    
