@@ -54,18 +54,15 @@ class InteractiveSnowglobe {
         el.style.position = 'fixed';
         el.style.top = '8px';
         el.style.right = '8px';
-        el.style.maxWidth = '60vw';
         el.style.padding = '6px 10px';
         el.style.background = 'rgba(0,0,0,0.6)';
         el.style.color = '#0f0';
         el.style.fontFamily = 'monospace';
-        el.style.fontSize = '11px';
-        el.style.lineHeight = '1.35';
+        el.style.fontSize = '12px';
         el.style.borderRadius = '6px';
         el.style.zIndex = '99999';
         el.style.pointerEvents = 'none';
-        el.style.whiteSpace = 'pre-wrap';
-        el.style.wordBreak = 'break-word';
+        el.style.whiteSpace = 'pre';
         document.body.appendChild(el);
         this.debugEl = el;
     }
@@ -82,8 +79,7 @@ class InteractiveSnowglobe {
         if (!this.debugMode || !this.debugEl) return;
         this.debugEl.textContent =
             `\u0394:${this.lastTotalDelta.toFixed(1)}  int:${this.shakeIntensity.toFixed(2)}  flakes:${this.snowflakes.length}\n` +
-            `evts:${this.debugEventCount}  perm:${this.debugPermState}  accG:${this.debugHasGravityAccel ? 'Y' : 'N'}  accR:${this.debugHasRawAccel ? 'Y' : 'N'}` +
-            (this.debugPermErrorMsg ? `\nerr: ${this.debugPermErrorMsg}` : '');
+            `evts:${this.debugEventCount}  perm:${this.debugPermState}  accG:${this.debugHasGravityAccel ? 'Y' : 'N'}  accR:${this.debugHasRawAccel ? 'Y' : 'N'}`;
     }
     
     createStars() {
@@ -175,7 +171,6 @@ class InteractiveSnowglobe {
             if (response === 'granted') {
                 this.debugPermState = 'granted';
                 permissionBtn.style.display = 'none';
-                document.querySelector('.instruction-sub').textContent = 'Shake away! \u2728';
                 this.addMotionListener();
                 this.shakeIntensity = Math.max(this.shakeIntensity, 0.35);
                 this.scheduleTransition();
