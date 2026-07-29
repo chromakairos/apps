@@ -17,8 +17,10 @@ class InteractiveSnowglobe {
         // Deeper diagnostics for debug overlay
         this.debugEventCount = 0;
         this.debugPermState = 'n/a';
+        this.debugPermErrorMsg = '';
         this.debugHasGravityAccel = false;
         this.debugHasRawAccel = false;
+        this.permissionRequestInFlight = false;
 
         // Debug overlay toggle: add ?debug=1 to the URL to see live sensor readout
         this.debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
@@ -77,7 +79,8 @@ class InteractiveSnowglobe {
         if (!this.debugMode || !this.debugEl) return;
         this.debugEl.textContent =
             `\u0394:${this.lastTotalDelta.toFixed(1)}  int:${this.shakeIntensity.toFixed(2)}  flakes:${this.snowflakes.length}\n` +
-            `evts:${this.debugEventCount}  perm:${this.debugPermState}  accG:${this.debugHasGravityAccel ? 'Y' : 'N'}  accR:${this.debugHasRawAccel ? 'Y' : 'N'}`;
+            `evts:${this.debugEventCount}  perm:${this.debugPermState}  accG:${this.debugHasGravityAccel ? 'Y' : 'N'}  accR:${this.debugHasRawAccel ? 'Y' : 'N'}` +
+            (this.debugPermErrorMsg ? `\nerr: ${this.debugPermErrorMsg}` : '');
     }
     
     createStars() {
@@ -117,16 +120,15 @@ class InteractiveSnowglobe {
                 permissionBtn.style.transform = 'translateX(-50%) scale(1.1)';
             }
             
-            ['click', 'touchstart', 'touchend'].forEach(eventType => {
-                permissionBtn.addEventListener(eventType, (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    try {
-                        this.requestMotionPermission();
-                    } catch (err) {
-                        this.debugError('permissionBtn handler', err);
-                    }
-                }, { passive: false });
+            permissionBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (this.permissionRequestInFlight) return;
+                this.permissionRequestInFlight = true;
+                try {
+                    this.requestMotionPermission();
+                } catch (err) {
+                    this.debugError('permissionBtn handler', err);
+                }
             });
         } else {
             this.debugPermState = 'no-api-direct';
@@ -166,6 +168,7 @@ class InteractiveSnowglobe {
         permissionBtn.innerHTML = 'Requesting permission...';
         
         DeviceMotionEvent.requestPermission().then(response => {
+            this.permissionRequestInFlight = false;
             if (response === 'granted') {
                 this.debugPermState = 'granted';
                 permissionBtn.style.display = 'none';
@@ -184,6 +187,8 @@ class InteractiveSnowglobe {
             }
         }).catch(error => {
             this.debugPermState = 'error';
+            this.debugPermErrorMsg = (error && error.message) ? error.message : String(error);
+            this.permissionRequestInFlight = false;
             console.error('Error requesting motion permission:', error);
             permissionBtn.innerHTML = 'Error - try mouse drag instead';
             permissionBtn.style.background = '#dc2626';
