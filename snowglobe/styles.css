@@ -98,8 +98,8 @@ body {
 }
 
 .snowman-gif {
-    width: 12rem;
-    height: 12rem;
+    width: 20rem; /*12*/
+    height: 20rem;
     object-fit: contain;
 }
 
@@ -140,6 +140,7 @@ body {
     font-weight: 500;
     cursor: pointer;
     z-index: 1000;
+    width:90vw;
 }
 
 .permission-btn:hover {
