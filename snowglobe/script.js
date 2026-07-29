@@ -9,13 +9,14 @@ class InteractiveSnowglobe {
         this.animationFrame = null;
         this.timerStarted = false;
 
-        // Unified spawn heartbeat — this is the ONLY thing that creates snowflakes now.
-        // It ticks at a fixed rate no matter what; only count/speed react to intensity.
-        this.spawnInterval = 350; // ms between spawn ticks (constant, always)
+        this.spawnInterval = 350;
         this.lastSpawnTime = 0;
-
-        // Lightweight throttle just for reading motion events (not for spawning)
         this.lastMotionSample = 0;
+        this.lastTotalDelta = 0;
+
+        // Debug overlay toggle: add ?debug=1 to the URL to see live sensor readout
+        this.debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
+        this.debugEl = null;
 
         this.init();
     }
@@ -24,6 +25,7 @@ class InteractiveSnowglobe {
         this.setupMessage();
         this.createStars();
         this.setupEventListeners();
+        if (this.debugMode) this.setupDebugOverlay();
         this.startAnimationLoop();
     }
     
@@ -33,6 +35,31 @@ class InteractiveSnowglobe {
         if (urlMessage) {
             document.getElementById('message-text').textContent = decodeURIComponent(urlMessage);
         }
+    }
+    
+    setupDebugOverlay() {
+        const el = document.createElement('div');
+        el.id = 'debug-overlay';
+        el.style.position = 'fixed';
+        el.style.top = '8px';
+        el.style.right = '8px';
+        el.style.padding = '6px 10px';
+        el.style.background = 'rgba(0,0,0,0.6)';
+        el.style.color = '#0f0';
+        el.style.fontFamily = 'monospace';
+        el.style.fontSize = '12px';
+        el.style.borderRadius = '6px';
+        el.style.zIndex = '99999';
+        el.style.pointerEvents = 'none';
+        el.style.whiteSpace = 'pre';
+        document.body.appendChild(el);
+        this.debugEl = el;
+    }
+    
+    updateDebugOverlay() {
+        if (!this.debugMode || !this.debugEl) return;
+        this.debugEl.textContent =
+            `\u0394:${this.lastTotalDelta.toFixed(1)}  int:${this.shakeIntensity.toFixed(2)}  flakes:${this.snowflakes.length}`;
     }
     
     createStars() {
@@ -67,7 +94,7 @@ class InteractiveSnowglobe {
             permissionBtn.style.display = 'block';
             
             if (isMobile) {
-                permissionBtn.innerHTML = '🎄 Tap to Enable Snow Magic! 🎄';
+                permissionBtn.innerHTML = '\ud83c\udf84 Tap to Enable Snow Magic! \ud83c\udf84';
                 permissionBtn.style.background = '#059669';
                 permissionBtn.style.transform = 'translateX(-50%) scale(1.1)';
             }
@@ -118,7 +145,7 @@ class InteractiveSnowglobe {
         DeviceMotionEvent.requestPermission().then(response => {
             if (response === 'granted') {
                 permissionBtn.style.display = 'none';
-                document.querySelector('.instruction-sub').textContent = 'Shake away! ✨';
+                document.querySelector('.instruction-sub').textContent = 'Shake away! \u2728';
                 this.addMotionListener();
                 this.shakeIntensity = Math.max(this.shakeIntensity, 0.35);
                 this.scheduleTransition();
@@ -160,6 +187,7 @@ class InteractiveSnowglobe {
         const deltaZ = Math.abs(currentZ - this.lastAcceleration.z);
         
         const totalDelta = deltaX + deltaY + deltaZ;
+        this.lastTotalDelta = totalDelta; // always record latest, even if throttled below
         
         this.lastAcceleration = { x: currentX, y: currentY, z: currentZ };
         
@@ -168,7 +196,8 @@ class InteractiveSnowglobe {
         this.lastMotionSample = now;
         
         if (totalDelta > 8) {
-            const intensity = Math.min(totalDelta / 15, 1);
+            // Wider range so a soft shake and a hard shake feel meaningfully different
+            const intensity = Math.min(totalDelta / 40, 1);
             this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
         }
     }
@@ -181,7 +210,6 @@ class InteractiveSnowglobe {
             snowflake.className = 'snowflake';
             snowflake.id = `snowflake-${this.snowflakeId++}`;
             
-            //const size = Math.random() * (2 + intensity * 3) + 2;
             const size = Math.random() * (3 + intensity * 5) + 4;
             const left = Math.random() * 100;
             const opacity = Math.random() * 0.8 + 0.2;
@@ -252,6 +280,8 @@ class InteractiveSnowglobe {
         if (this.shakeIntensity > 0) {
             this.shakeIntensity = Math.max(0, this.shakeIntensity - 0.007);
         }
+        
+        this.updateDebugOverlay();
     }
     
     startAnimationLoop() {
