@@ -14,6 +14,12 @@ class InteractiveSnowglobe {
         this.lastMotionSample = 0;
         this.lastTotalDelta = 0;
 
+        // Deeper diagnostics for debug overlay
+        this.debugEventCount = 0;
+        this.debugPermState = 'n/a';
+        this.debugHasGravityAccel = false;
+        this.debugHasRawAccel = false;
+
         // Debug overlay toggle: add ?debug=1 to the URL to see live sensor readout
         this.debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
         this.debugEl = null;
@@ -59,7 +65,8 @@ class InteractiveSnowglobe {
     updateDebugOverlay() {
         if (!this.debugMode || !this.debugEl) return;
         this.debugEl.textContent =
-            `\u0394:${this.lastTotalDelta.toFixed(1)}  int:${this.shakeIntensity.toFixed(2)}  flakes:${this.snowflakes.length}`;
+            `\u0394:${this.lastTotalDelta.toFixed(1)}  int:${this.shakeIntensity.toFixed(2)}  flakes:${this.snowflakes.length}\n` +
+            `evts:${this.debugEventCount}  perm:${this.debugPermState}  accG:${this.debugHasGravityAccel ? 'Y' : 'N'}  accR:${this.debugHasRawAccel ? 'Y' : 'N'}`;
     }
     
     createStars() {
@@ -107,6 +114,7 @@ class InteractiveSnowglobe {
                 }, { passive: false });
             });
         } else {
+            this.debugPermState = 'no-api-direct';
             this.addMotionListener();
             this.scheduleTransition();
         }
@@ -144,12 +152,14 @@ class InteractiveSnowglobe {
         
         DeviceMotionEvent.requestPermission().then(response => {
             if (response === 'granted') {
+                this.debugPermState = 'granted';
                 permissionBtn.style.display = 'none';
                 document.querySelector('.instruction-sub').textContent = 'Shake away! \u2728';
                 this.addMotionListener();
                 this.shakeIntensity = Math.max(this.shakeIntensity, 0.35);
                 this.scheduleTransition();
             } else {
+                this.debugPermState = 'denied';
                 permissionBtn.innerHTML = 'Permission denied - try mouse drag instead';
                 permissionBtn.style.background = '#dc2626';
                 setTimeout(() => {
@@ -158,6 +168,7 @@ class InteractiveSnowglobe {
                 }, 3000);
             }
         }).catch(error => {
+            this.debugPermState = 'error';
             console.error('Error requesting motion permission:', error);
             permissionBtn.innerHTML = 'Error - try mouse drag instead';
             permissionBtn.style.background = '#dc2626';
@@ -173,10 +184,21 @@ class InteractiveSnowglobe {
     }
     
     handleDeviceMotion(event) {
+        this.debugEventCount++;
         if (this.showNightSky) return;
         
-        const acceleration = event.accelerationIncludingGravity;
-        if (!acceleration) return;
+        const gravityAccel = event.accelerationIncludingGravity;
+        const rawAccel = event.acceleration;
+        this.debugHasGravityAccel = !!(gravityAccel && (gravityAccel.x !== null || gravityAccel.y !== null || gravityAccel.z !== null));
+        this.debugHasRawAccel = !!(rawAccel && (rawAccel.x !== null || rawAccel.y !== null || rawAccel.z !== null));
+        
+        // Fall back to raw (non-gravity) acceleration if the gravity-included
+        // reading isn't available on this device/browser
+        const acceleration = (this.debugHasGravityAccel ? gravityAccel : (this.debugHasRawAccel ? rawAccel : null));
+        if (!acceleration) {
+            this.updateDebugOverlay();
+            return;
+        }
         
         const currentX = acceleration.x || 0;
         const currentY = acceleration.y || 0;
