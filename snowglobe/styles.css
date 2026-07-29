@@ -49,6 +49,7 @@ body {
     width: 100%;
     height: 100%;
     background: linear-gradient(to bottom, #dbeafe, #bfdbfe, #ffffff);
+    background: linear-gradient(to bottom, #dbeafe, #93c5fd, #60a5fa);
 }
 
 .night-gradient {
