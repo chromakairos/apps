@@ -28,10 +28,13 @@ class InteractiveSnowglobe {
     }
     
     init() {
-        this.setupMessage();
-        this.createStars();
-        this.setupEventListeners();
+        // Create the overlay FIRST, before anything else that could throw —
+        // so if something below fails, we still see it instead of the overlay vanishing.
         if (this.debugMode) this.setupDebugOverlay();
+        
+        try { this.setupMessage(); } catch (e) { this.debugError('setupMessage', e); }
+        try { this.createStars(); } catch (e) { this.debugError('createStars', e); }
+        try { this.setupEventListeners(); } catch (e) { this.debugError('setupEventListeners', e); }
         this.startAnimationLoop();
     }
     
@@ -60,6 +63,14 @@ class InteractiveSnowglobe {
         el.style.whiteSpace = 'pre';
         document.body.appendChild(el);
         this.debugEl = el;
+    }
+    
+    debugError(label, e) {
+        console.error(label, e);
+        if (this.debugEl) {
+            this.debugEl.style.color = '#f55';
+            this.debugEl.textContent = `ERROR in ${label}:\n${e && e.message ? e.message : e}`;
+        }
     }
     
     updateDebugOverlay() {
@@ -110,7 +121,11 @@ class InteractiveSnowglobe {
                 permissionBtn.addEventListener(eventType, (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    this.requestMotionPermission();
+                    try {
+                        this.requestMotionPermission();
+                    } catch (err) {
+                        this.debugError('permissionBtn handler', err);
+                    }
                 }, { passive: false });
             });
         } else {
@@ -180,7 +195,13 @@ class InteractiveSnowglobe {
     }
     
     addMotionListener() {
-        window.addEventListener('devicemotion', this.handleDeviceMotion.bind(this));
+        window.addEventListener('devicemotion', (event) => {
+            try {
+                this.handleDeviceMotion(event);
+            } catch (e) {
+                this.debugError('handleDeviceMotion', e);
+            }
+        });
     }
     
     handleDeviceMotion(event) {
@@ -308,7 +329,12 @@ class InteractiveSnowglobe {
     
     startAnimationLoop() {
         const animate = () => {
-            this.animateSnowflakes();
+            try {
+                this.animateSnowflakes();
+            } catch (e) {
+                this.debugError('animateSnowflakes', e);
+                return; // stop the loop here so the error stays visible on screen
+            }
             this.animationFrame = requestAnimationFrame(animate);
         };
         animate();
