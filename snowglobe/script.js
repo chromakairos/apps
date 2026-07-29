@@ -196,8 +196,8 @@ class InteractiveSnowglobe {
         this.lastMotionSample = now;
         
         if (totalDelta > 8) {
-            // Wider range so a soft shake and a hard shake feel meaningfully different
-            const intensity = Math.min(totalDelta / 40, 1);
+            // More sensitive: real-world deltas were topping out well below our old /40 ceiling
+            const intensity = Math.min(totalDelta / 18, 1);
             this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
         }
     }
@@ -239,7 +239,7 @@ class InteractiveSnowglobe {
         this.lastSpawnTime = now;
         
         const baseCount = 1;
-        const extraCount = Math.round(this.shakeIntensity * 20);
+        const extraCount = Math.round(this.shakeIntensity * 35);
         const count = baseCount + extraCount;
         
         this.createSnowflakes(count, this.shakeIntensity);
@@ -250,8 +250,8 @@ class InteractiveSnowglobe {
         
         this.trySpawn();
         
-        if (this.snowflakes.length > 60) {
-            const toRemove = this.snowflakes.splice(0, this.snowflakes.length - 60);
+        if (this.snowflakes.length > 90) {
+            const toRemove = this.snowflakes.splice(0, this.snowflakes.length - 90);
             toRemove.forEach(flake => flake.remove());
         }
         
