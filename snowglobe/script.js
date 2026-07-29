@@ -54,15 +54,18 @@ class InteractiveSnowglobe {
         el.style.position = 'fixed';
         el.style.top = '8px';
         el.style.right = '8px';
+        el.style.maxWidth = '60vw';
         el.style.padding = '6px 10px';
         el.style.background = 'rgba(0,0,0,0.6)';
         el.style.color = '#0f0';
         el.style.fontFamily = 'monospace';
-        el.style.fontSize = '12px';
+        el.style.fontSize = '11px';
+        el.style.lineHeight = '1.35';
         el.style.borderRadius = '6px';
         el.style.zIndex = '99999';
         el.style.pointerEvents = 'none';
-        el.style.whiteSpace = 'pre';
+        el.style.whiteSpace = 'pre-wrap';
+        el.style.wordBreak = 'break-word';
         document.body.appendChild(el);
         this.debugEl = el;
     }
