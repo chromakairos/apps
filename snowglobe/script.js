@@ -181,7 +181,8 @@ class InteractiveSnowglobe {
             snowflake.className = 'snowflake';
             snowflake.id = `snowflake-${this.snowflakeId++}`;
             
-            const size = Math.random() * (2 + intensity * 3) + 2;
+            //const size = Math.random() * (2 + intensity * 3) + 2;
+            const size = Math.random() * (3 + intensity * 5) + 4;
             const left = Math.random() * 100;
             const opacity = Math.random() * 0.8 + 0.2;
             
