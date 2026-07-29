@@ -7,10 +7,16 @@ class InteractiveSnowglobe {
         this.lastAcceleration = { x: 0, y: 0, z: 0 };
         this.snowflakeId = 0;
         this.animationFrame = null;
-        this.lastSnowTime = 0;
         this.timerStarted = false;
-        this.lastAmbientTime = 0; // tracks ambient snowfall timing
-        
+
+        // Unified spawn heartbeat — this is the ONLY thing that creates snowflakes now.
+        // It ticks at a fixed rate no matter what; only count/speed react to intensity.
+        this.spawnInterval = 350; // ms between spawn ticks (constant, always)
+        this.lastSpawnTime = 0;
+
+        // Lightweight throttle just for reading motion events (not for spawning)
+        this.lastMotionSample = 0;
+
         this.init();
     }
     
@@ -23,7 +29,6 @@ class InteractiveSnowglobe {
     }
     
     setupMessage() {
-        // Get message from URL parameter
         const urlParams = new URLSearchParams(window.location.search);
         const urlMessage = urlParams.get('message');
         if (urlMessage) {
@@ -56,22 +61,18 @@ class InteractiveSnowglobe {
     }
     
     setupEventListeners() {
-        // Better mobile detection
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
-        // Check if we need to show permission button (iOS 13+)
         if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
             const permissionBtn = document.getElementById('permission-btn');
             permissionBtn.style.display = 'block';
             
-            // Make button more prominent on mobile for NFC users
             if (isMobile) {
                 permissionBtn.innerHTML = '🎄 Tap to Enable Snow Magic! 🎄';
                 permissionBtn.style.background = '#059669';
                 permissionBtn.style.transform = 'translateX(-50%) scale(1.1)';
             }
             
-            // Multiple event types for better mobile compatibility
             ['click', 'touchstart', 'touchend'].forEach(eventType => {
                 permissionBtn.addEventListener(eventType, (e) => {
                     e.preventDefault();
@@ -80,13 +81,11 @@ class InteractiveSnowglobe {
                 }, { passive: false });
             });
         } else {
-            // For Android and older iOS, just add the listener directly
             this.addMotionListener();
-            // Start timer immediately for non-iOS devices
             this.scheduleTransition();
         }
         
-        // Mouse events for desktop testing
+        // Mouse events for desktop testing — now just nudges the intensity dial
         let isMouseDown = false;
         let lastMousePos = { x: 0, y: 0 };
         
@@ -105,10 +104,10 @@ class InteractiveSnowglobe {
             const deltaY = Math.abs(e.clientY - lastMousePos.y);
             const totalDelta = deltaX + deltaY;
             
-            if (totalDelta > 20) {
+            if (totalDelta > 15) {
                 const intensity = Math.min(totalDelta / 100, 1);
-                this.shakeIntensity = intensity;
-                this.createSnowflakes(Math.floor(intensity * 15) + 3, intensity);
+                // Take the max so we capture peaks without stomping on an ongoing decay
+                this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
             }
             
             lastMousePos = { x: e.clientX, y: e.clientY };
@@ -125,196 +124,15 @@ class InteractiveSnowglobe {
                 document.querySelector('.instruction-sub').textContent = 'Shake away! ✨';
                 this.addMotionListener();
                 
-                // Give immediate feedback with some snow
-                this.createSnowflakes(10, 0.5);
+                // Gentle nudge instead of a hard burst — the heartbeat eases it in smoothly
+                this.shakeIntensity = Math.max(this.shakeIntensity, 0.35);
                 
-                // START the 10-second timer only now!
                 this.scheduleTransition();
             } else {
                 permissionBtn.innerHTML = 'Permission denied - try mouse drag instead';
                 permissionBtn.style.background = '#dc2626';
                 setTimeout(() => {
                     permissionBtn.style.display = 'none';
-                    // Still start timer even if permission denied (mouse still works)
                     this.scheduleTransition();
                 }, 3000);
             }
-        }).catch(error => {
-            console.error('Error requesting motion permission:', error);
-            permissionBtn.innerHTML = 'Error - try mouse drag instead';
-            permissionBtn.style.background = '#dc2626';
-            setTimeout(() => {
-                permissionBtn.style.display = 'none';
-                // Still start timer even on error (mouse still works)
-                this.scheduleTransition();
-            }, 3000);
-        });
-    }
-    
-    addMotionListener() {
-        window.addEventListener('devicemotion', this.handleDeviceMotion.bind(this));
-    }
-    
-    handleDeviceMotion(event) {
-        if (this.showNightSky) return;
-        
-        const acceleration = event.accelerationIncludingGravity;
-        if (!acceleration) return;
-        
-        // Handle null values that sometimes occur on iOS
-        const currentX = acceleration.x || 0;
-        const currentY = acceleration.y || 0;
-        const currentZ = acceleration.z || 0;
-        
-        const deltaX = Math.abs(currentX - this.lastAcceleration.x);
-        const deltaY = Math.abs(currentY - this.lastAcceleration.y);
-        const deltaZ = Math.abs(currentZ - this.lastAcceleration.z);
-        
-        const totalDelta = deltaX + deltaY + deltaZ;
-        
-        this.lastAcceleration = {
-            x: currentX,
-            y: currentY,
-            z: currentZ
-        };
-        
-        // Lower threshold, more responsive to intensity
-        if (totalDelta > 8) {
-            const now = Date.now();
-            // Shorter rate limit for more responsive feel
-            if (!this.lastSnowTime || now - this.lastSnowTime > 200) {
-                const intensity = Math.min(totalDelta / 15, 1); // More sensitive to intensity
-                this.shakeIntensity = intensity;
-                
-                // Much more dramatic scaling - BIG shakes = LOTS of snow!
-                const baseFlakes = 4;
-                const intensityFlakes = Math.floor(intensity * 40); // Huge range: 0-40 extra flakes
-                const flakeCount = baseFlakes + intensityFlakes; // Total: 4-44 flakes
-                
-                this.createSnowflakes(flakeCount, intensity);
-                this.lastSnowTime = now;
-                
-                console.log(`Shake intensity: ${intensity.toFixed(2)}, flakes: ${flakeCount}`);
-            }
-        }
-    }
-    
-    createSnowflakes(count, intensity) {
-        const container = document.getElementById('snowflakes-container');
-        
-        for (let i = 0; i < count; i++) {
-            const snowflake = document.createElement('div');
-            snowflake.className = 'snowflake';
-            snowflake.id = `snowflake-${this.snowflakeId++}`;
-            
-            const size = Math.random() * (2 + intensity * 3) + 2;
-            const left = Math.random() * 100;
-            const opacity = Math.random() * 0.8 + 0.2;
-            
-            snowflake.style.width = `${size}px`;
-            snowflake.style.height = `${size}px`;
-            snowflake.style.left = `${left}%`;
-            snowflake.style.top = '-10px';
-            snowflake.style.opacity = opacity;
-            
-            // Store animation properties
-            snowflake.dataset.fallSpeed = Math.random() * (2 + intensity * 3) + 1;
-            snowflake.dataset.horizontalDrift = (Math.random() - 0.5) * 2;
-            snowflake.dataset.currentTop = -10;
-            snowflake.dataset.currentLeft = left;
-            
-            container.appendChild(snowflake);
-            this.snowflakes.push(snowflake);
-        }
-    }
-    
-    ambientSnowfall() {
-        if (this.showNightSky) return;
-        
-        const now = Date.now();
-        if (!this.lastAmbientTime) this.lastAmbientTime = now;
-        
-        // Base rate when calm: one tiny flake ~every 700ms
-        // Gets faster/denser as shakeIntensity rises, creating the "settle" effect
-        const baseInterval = 700;
-        const minInterval = 120;
-        const interval = baseInterval - (baseInterval - minInterval) * this.shakeIntensity;
-        
-        if (now - this.lastAmbientTime > interval) {
-            // 1 flake at rest, up to ~4 flakes while settling from a shake
-            const count = 1 + Math.floor(this.shakeIntensity * 3);
-            // Keep ambient flakes small/subtle (intensity capped low for size purposes)
-            this.createSnowflakes(count, Math.min(this.shakeIntensity, 0.3));
-            this.lastAmbientTime = now;
-        }
-    }
-    
-    animateSnowflakes() {
-        if (this.showNightSky) return;
-        
-        this.ambientSnowfall(); // keeps gentle snow falling continuously
-        
-        // Higher limit to accommodate bigger shake bursts
-        if (this.snowflakes.length > 60) {
-            // Remove oldest snowflakes
-            const toRemove = this.snowflakes.splice(0, this.snowflakes.length - 60);
-            toRemove.forEach(flake => flake.remove());
-        }
-        
-        this.snowflakes = this.snowflakes.filter(snowflake => {
-            const currentTop = parseFloat(snowflake.dataset.currentTop);
-            const currentLeft = parseFloat(snowflake.dataset.currentLeft);
-            const fallSpeed = parseFloat(snowflake.dataset.fallSpeed);
-            const horizontalDrift = parseFloat(snowflake.dataset.horizontalDrift);
-            
-            const newTop = currentTop + fallSpeed;
-            const newLeft = currentLeft + horizontalDrift * 0.1;
-            
-            if (newTop > window.innerHeight + 10) {
-                snowflake.remove();
-                return false;
-            }
-            
-            snowflake.dataset.currentTop = newTop;
-            snowflake.dataset.currentLeft = newLeft;
-            snowflake.style.top = `${newTop}px`;
-            snowflake.style.left = `${newLeft}%`;
-            
-            return true;
-        });
-        
-        // Decay shake intensity (slowed slightly for a gentle "settle" tail)
-        if (this.shakeIntensity > 0) {
-            this.shakeIntensity = Math.max(0, this.shakeIntensity - 0.007);
-        }
-    }
-    
-    startAnimationLoop() {
-        const animate = () => {
-            this.animateSnowflakes();
-            this.animationFrame = requestAnimationFrame(animate);
-        };
-        animate();
-    }
-    
-    scheduleTransition() {
-        setTimeout(() => {
-            this.transitionToNightSky();
-        }, 10000); // 10 seconds
-    }
-    
-    transitionToNightSky() {
-        this.showNightSky = true;
-        
-        const snowglobeScene = document.getElementById('snowglobe-scene');
-        const nightScene = document.getElementById('night-scene');
-        
-        snowglobeScene.classList.add('fade-out');
-        nightScene.classList.add('fade-in');
-    }
-}
-
-// Initialize the snowglobe when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    new InteractiveSnowglobe();
-});
