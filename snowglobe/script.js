@@ -25,7 +25,6 @@ class InteractiveSnowglobe {
         this.createStars();
         this.setupEventListeners();
         this.startAnimationLoop();
-        // DON'T start timer here - wait for permission button click
     }
     
     setupMessage() {
@@ -85,7 +84,6 @@ class InteractiveSnowglobe {
             this.scheduleTransition();
         }
         
-        // Mouse events for desktop testing — now just nudges the intensity dial
         let isMouseDown = false;
         let lastMousePos = { x: 0, y: 0 };
         
@@ -106,7 +104,6 @@ class InteractiveSnowglobe {
             
             if (totalDelta > 15) {
                 const intensity = Math.min(totalDelta / 100, 1);
-                // Take the max so we capture peaks without stomping on an ongoing decay
                 this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
             }
             
@@ -123,10 +120,7 @@ class InteractiveSnowglobe {
                 permissionBtn.style.display = 'none';
                 document.querySelector('.instruction-sub').textContent = 'Shake away! ✨';
                 this.addMotionListener();
-                
-                // Gentle nudge instead of a hard burst — the heartbeat eases it in smoothly
                 this.shakeIntensity = Math.max(this.shakeIntensity, 0.35);
-                
                 this.scheduleTransition();
             } else {
                 permissionBtn.innerHTML = 'Permission denied - try mouse drag instead';
@@ -136,6 +130,154 @@ class InteractiveSnowglobe {
                     this.scheduleTransition();
                 }, 3000);
             }
-        }
-  }
+        }).catch(error => {
+            console.error('Error requesting motion permission:', error);
+            permissionBtn.innerHTML = 'Error - try mouse drag instead';
+            permissionBtn.style.background = '#dc2626';
+            setTimeout(() => {
+                permissionBtn.style.display = 'none';
+                this.scheduleTransition();
+            }, 3000);
+        });
+    }
     
+    addMotionListener() {
+        window.addEventListener('devicemotion', this.handleDeviceMotion.bind(this));
+    }
+    
+    handleDeviceMotion(event) {
+        if (this.showNightSky) return;
+        
+        const acceleration = event.accelerationIncludingGravity;
+        if (!acceleration) return;
+        
+        const currentX = acceleration.x || 0;
+        const currentY = acceleration.y || 0;
+        const currentZ = acceleration.z || 0;
+        
+        const deltaX = Math.abs(currentX - this.lastAcceleration.x);
+        const deltaY = Math.abs(currentY - this.lastAcceleration.y);
+        const deltaZ = Math.abs(currentZ - this.lastAcceleration.z);
+        
+        const totalDelta = deltaX + deltaY + deltaZ;
+        
+        this.lastAcceleration = { x: currentX, y: currentY, z: currentZ };
+        
+        const now = Date.now();
+        if (now - this.lastMotionSample < 50) return;
+        this.lastMotionSample = now;
+        
+        if (totalDelta > 8) {
+            const intensity = Math.min(totalDelta / 15, 1);
+            this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
+        }
+    }
+    
+    createSnowflakes(count, intensity) {
+        const container = document.getElementById('snowflakes-container');
+        
+        for (let i = 0; i < count; i++) {
+            const snowflake = document.createElement('div');
+            snowflake.className = 'snowflake';
+            snowflake.id = `snowflake-${this.snowflakeId++}`;
+            
+            const size = Math.random() * (2 + intensity * 3) + 2;
+            const left = Math.random() * 100;
+            const opacity = Math.random() * 0.8 + 0.2;
+            
+            snowflake.style.width = `${size}px`;
+            snowflake.style.height = `${size}px`;
+            snowflake.style.left = `${left}%`;
+            snowflake.style.top = '-10px';
+            snowflake.style.opacity = opacity;
+            
+            snowflake.dataset.fallSpeed = Math.random() * (2 + intensity * 3) + 1;
+            snowflake.dataset.horizontalDrift = (Math.random() - 0.5) * 2;
+            snowflake.dataset.currentTop = -10;
+            snowflake.dataset.currentLeft = left;
+            
+            container.appendChild(snowflake);
+            this.snowflakes.push(snowflake);
+        }
+    }
+    
+    trySpawn() {
+        if (this.showNightSky) return;
+        
+        const now = Date.now();
+        if (!this.lastSpawnTime) this.lastSpawnTime = now;
+        if (now - this.lastSpawnTime < this.spawnInterval) return;
+        this.lastSpawnTime = now;
+        
+        const baseCount = 1;
+        const extraCount = Math.round(this.shakeIntensity * 20);
+        const count = baseCount + extraCount;
+        
+        this.createSnowflakes(count, this.shakeIntensity);
+    }
+    
+    animateSnowflakes() {
+        if (this.showNightSky) return;
+        
+        this.trySpawn();
+        
+        if (this.snowflakes.length > 60) {
+            const toRemove = this.snowflakes.splice(0, this.snowflakes.length - 60);
+            toRemove.forEach(flake => flake.remove());
+        }
+        
+        this.snowflakes = this.snowflakes.filter(snowflake => {
+            const currentTop = parseFloat(snowflake.dataset.currentTop);
+            const currentLeft = parseFloat(snowflake.dataset.currentLeft);
+            const fallSpeed = parseFloat(snowflake.dataset.fallSpeed);
+            const horizontalDrift = parseFloat(snowflake.dataset.horizontalDrift);
+            
+            const newTop = currentTop + fallSpeed;
+            const newLeft = currentLeft + horizontalDrift * 0.1;
+            
+            if (newTop > window.innerHeight + 10) {
+                snowflake.remove();
+                return false;
+            }
+            
+            snowflake.dataset.currentTop = newTop;
+            snowflake.dataset.currentLeft = newLeft;
+            snowflake.style.top = `${newTop}px`;
+            snowflake.style.left = `${newLeft}%`;
+            
+            return true;
+        });
+        
+        if (this.shakeIntensity > 0) {
+            this.shakeIntensity = Math.max(0, this.shakeIntensity - 0.007);
+        }
+    }
+    
+    startAnimationLoop() {
+        const animate = () => {
+            this.animateSnowflakes();
+            this.animationFrame = requestAnimationFrame(animate);
+        };
+        animate();
+    }
+    
+    scheduleTransition() {
+        setTimeout(() => {
+            this.transitionToNightSky();
+        }, 10000);
+    }
+    
+    transitionToNightSky() {
+        this.showNightSky = true;
+        
+        const snowglobeScene = document.getElementById('snowglobe-scene');
+        const nightScene = document.getElementById('night-scene');
+        
+        snowglobeScene.classList.add('fade-out');
+        nightScene.classList.add('fade-in');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new InteractiveSnowglobe();
+});
