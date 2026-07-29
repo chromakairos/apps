@@ -165,8 +165,9 @@ body {
 
 .message-text {
     color: white;
-    font-size: 4rem;
-    font-weight: bold;
+    font-size: 3rem;
+    /*
+    font-weight: bold;*/
     text-align: center;
     padding: 0 1rem;
     font-family: 'Brush Script MT', cursive, sans-serif;
@@ -200,8 +201,8 @@ body {
     }
     
     .snowman-gif {
-        width: 8rem;
-        height: 8rem;
+        width: 14rem;
+        height: 14rem;
     }
     
     .instruction-main {
