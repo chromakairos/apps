@@ -9,6 +9,7 @@ class InteractiveSnowglobe {
         this.animationFrame = null;
         this.lastSnowTime = 0;
         this.timerStarted = false;
+        this.lastAmbientTime = 0; // tracks ambient snowfall timing
         
         this.init();
     }
@@ -227,8 +228,31 @@ class InteractiveSnowglobe {
         }
     }
     
+    ambientSnowfall() {
+        if (this.showNightSky) return;
+        
+        const now = Date.now();
+        if (!this.lastAmbientTime) this.lastAmbientTime = now;
+        
+        // Base rate when calm: one tiny flake ~every 700ms
+        // Gets faster/denser as shakeIntensity rises, creating the "settle" effect
+        const baseInterval = 700;
+        const minInterval = 120;
+        const interval = baseInterval - (baseInterval - minInterval) * this.shakeIntensity;
+        
+        if (now - this.lastAmbientTime > interval) {
+            // 1 flake at rest, up to ~4 flakes while settling from a shake
+            const count = 1 + Math.floor(this.shakeIntensity * 3);
+            // Keep ambient flakes small/subtle (intensity capped low for size purposes)
+            this.createSnowflakes(count, Math.min(this.shakeIntensity, 0.3));
+            this.lastAmbientTime = now;
+        }
+    }
+    
     animateSnowflakes() {
         if (this.showNightSky) return;
+        
+        this.ambientSnowfall(); // keeps gentle snow falling continuously
         
         // Higher limit to accommodate bigger shake bursts
         if (this.snowflakes.length > 60) {
@@ -259,9 +283,9 @@ class InteractiveSnowglobe {
             return true;
         });
         
-        // Decay shake intensity
+        // Decay shake intensity (slowed slightly for a gentle "settle" tail)
         if (this.shakeIntensity > 0) {
-            this.shakeIntensity = Math.max(0, this.shakeIntensity - 0.01);
+            this.shakeIntensity = Math.max(0, this.shakeIntensity - 0.007);
         }
     }
     
